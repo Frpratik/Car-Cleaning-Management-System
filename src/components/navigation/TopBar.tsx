@@ -2,23 +2,35 @@ import React, { useState } from 'react';
 import { UserRole } from '../../types';
 import { notificationService } from '../../services/notificationEngine';
 import { NotificationDrawer } from '../modals/NotificationDrawer';
-import { Car, Wrench, ShieldAlert, Sparkles, TrendingUp, Bell } from 'lucide-react';
+import { 
+  Car, 
+  Wrench, 
+  ShieldAlert, 
+  Sparkles, 
+  TrendingUp, 
+  Bell, 
+  Shield, 
+  Globe 
+} from 'lucide-react';
 
 interface TopBarProps {
-  currentRole: UserRole;
+  currentRole: UserRole | 'SUPER_ADMIN';
   currentTab: 'MAIN' | 'ANALYTICS';
-  onRoleChange: (role: UserRole) => void;
+  onRoleChange: (role: UserRole | 'SUPER_ADMIN') => void;
   onTabChange: (tab: 'MAIN' | 'ANALYTICS') => void;
+  onGoToPublic: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
   currentRole,
   currentTab,
   onRoleChange,
-  onTabChange
+  onTabChange,
+  onGoToPublic
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const unreadCount = notificationService.getUnreadCount(currentRole === 'SOCIETY_MANAGER' ? 'ADMIN' : currentRole);
+  const roleForNotifs = currentRole === 'SUPER_ADMIN' || currentRole === 'SOCIETY_MANAGER' ? 'ADMIN' : currentRole;
+  const unreadCount = notificationService.getUnreadCount(roleForNotifs as any);
 
   return (
     <>
@@ -44,48 +56,69 @@ export const TopBar: React.FC<TopBarProps> = ({
             flexWrap: 'wrap'
           }}
         >
-          {/* Brand Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
+          {/* Brand Logo & Public Link */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--color-brand-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 12px rgba(59, 130, 246, 0.5)'
+                }}
+              >
+                <Sparkles size={18} color="#ffffff" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em', color: '#ffffff' }}>
+                    AuraCar
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.625rem',
+                      fontWeight: 800,
+                      backgroundColor: 'var(--color-bg-elevated)',
+                      color: 'var(--color-brand-primary)',
+                      padding: '1px 6px',
+                      borderRadius: 'var(--radius-full)',
+                      border: '1px solid var(--color-brand-border)'
+                    }}
+                  >
+                    OS
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
+                  Multi-Tenant Residential SaaS
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={onGoToPublic}
               style={{
-                width: '32px',
-                height: '32px',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--color-border-subtle)',
+                color: 'var(--color-text-secondary)',
                 borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--color-brand-primary)',
+                padding: '4px 8px',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 0 12px rgba(59, 130, 246, 0.5)'
+                gap: '4px'
               }}
             >
-              <Sparkles size={18} color="#ffffff" />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em', color: '#ffffff' }}>
-                  AuraCar
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.625rem',
-                    fontWeight: 800,
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    color: 'var(--color-brand-primary)',
-                    padding: '1px 6px',
-                    borderRadius: 'var(--radius-full)',
-                    border: '1px solid var(--color-brand-border)'
-                  }}
-                >
-                  OS
-                </span>
-              </div>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
-                Residential Society Fleet
-              </div>
-            </div>
+              <Globe size={12} /> Public Site
+            </button>
           </div>
 
-          {/* Role & Analytics Switcher */}
+          {/* Role & Module Switcher */}
           <div
             style={{
               display: 'flex',
@@ -98,43 +131,23 @@ export const TopBar: React.FC<TopBarProps> = ({
             }}
           >
             <button
-              onClick={() => { onTabChange('MAIN'); onRoleChange('CUSTOMER'); }}
+              onClick={() => { onTabChange('MAIN'); onRoleChange('SUPER_ADMIN'); }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 12px',
+                padding: '6px 10px',
                 fontSize: '0.75rem',
                 fontWeight: 700,
                 borderRadius: 'var(--radius-sm)',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: currentTab === 'MAIN' && currentRole === 'CUSTOMER' ? 'var(--color-brand-primary)' : 'transparent',
-                color: currentTab === 'MAIN' && currentRole === 'CUSTOMER' ? '#ffffff' : 'var(--color-text-secondary)'
+                backgroundColor: currentTab === 'MAIN' && currentRole === 'SUPER_ADMIN' ? '#F59E0B' : 'transparent',
+                color: currentTab === 'MAIN' && currentRole === 'SUPER_ADMIN' ? '#090D14' : 'var(--color-text-secondary)'
               }}
             >
-              <Car size={14} />
-              Customer
-            </button>
-
-            <button
-              onClick={() => { onTabChange('MAIN'); onRoleChange('PROVIDER'); }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: currentTab === 'MAIN' && currentRole === 'PROVIDER' ? '#10B981' : 'transparent',
-                color: currentTab === 'MAIN' && currentRole === 'PROVIDER' ? '#090D14' : 'var(--color-text-secondary)'
-              }}
-            >
-              <Wrench size={14} />
-              Provider
+              <Shield size={13} />
+              Super Admin
             </button>
 
             <button
@@ -143,18 +156,58 @@ export const TopBar: React.FC<TopBarProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 12px',
+                padding: '6px 10px',
                 fontSize: '0.75rem',
                 fontWeight: 700,
                 borderRadius: 'var(--radius-sm)',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: currentTab === 'MAIN' && currentRole === 'ADMIN' ? '#F59E0B' : 'transparent',
-                color: currentTab === 'MAIN' && currentRole === 'ADMIN' ? '#090D14' : 'var(--color-text-secondary)'
+                backgroundColor: currentTab === 'MAIN' && currentRole === 'ADMIN' ? '#3B82F6' : 'transparent',
+                color: currentTab === 'MAIN' && currentRole === 'ADMIN' ? '#ffffff' : 'var(--color-text-secondary)'
               }}
             >
-              <ShieldAlert size={14} />
-              Operations
+              <ShieldAlert size={13} />
+              Society Admin
+            </button>
+
+            <button
+              onClick={() => { onTabChange('MAIN'); onRoleChange('CUSTOMER'); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: currentTab === 'MAIN' && currentRole === 'CUSTOMER' ? '#10B981' : 'transparent',
+                color: currentTab === 'MAIN' && currentRole === 'CUSTOMER' ? '#090D14' : 'var(--color-text-secondary)'
+              }}
+            >
+              <Car size={13} />
+              Resident
+            </button>
+
+            <button
+              onClick={() => { onTabChange('MAIN'); onRoleChange('PROVIDER'); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: currentTab === 'MAIN' && currentRole === 'PROVIDER' ? '#A855F7' : 'transparent',
+                color: currentTab === 'MAIN' && currentRole === 'PROVIDER' ? '#ffffff' : 'var(--color-text-secondary)'
+              }}
+            >
+              <Wrench size={13} />
+              Cleaner Pro
             </button>
 
             <button
@@ -163,22 +216,22 @@ export const TopBar: React.FC<TopBarProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 12px',
+                padding: '6px 10px',
                 fontSize: '0.75rem',
                 fontWeight: 700,
                 borderRadius: 'var(--radius-sm)',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: currentTab === 'ANALYTICS' ? '#8B5CF6' : 'transparent',
+                backgroundColor: currentTab === 'ANALYTICS' ? '#6366F1' : 'transparent',
                 color: currentTab === 'ANALYTICS' ? '#ffffff' : 'var(--color-text-secondary)'
               }}
             >
-              <TrendingUp size={14} />
-              Growth & Density
+              <TrendingUp size={13} />
+              Density Engine
             </button>
           </div>
 
-          {/* Right Action Icons */}
+          {/* Right Action: Notification Bell */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
               onClick={() => setShowNotifications(true)}
@@ -225,7 +278,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       </header>
 
       <NotificationDrawer
-        currentRole={currentRole}
+        currentRole={roleForNotifs as any}
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
       />

@@ -2,17 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { UserRole } from './types';
 import { store } from './services/store';
 import { TopBar } from './components/navigation/TopBar';
+import { PublicLandingPage } from './views/PublicLandingPage';
+import { LoginView } from './views/LoginView';
+import { SuperAdminView } from './views/SuperAdminView';
+import { AdminView } from './views/AdminView';
 import { CustomerView } from './views/CustomerView';
 import { ProviderView } from './views/ProviderView';
-import { AdminView } from './views/AdminView';
 import { AnalyticsView } from './views/AnalyticsView';
 
 export const App: React.FC = () => {
-  const [role, setRole] = useState<UserRole>('CUSTOMER');
+  const [viewMode, setViewMode] = useState<'LANDING' | 'LOGIN' | 'APP'>('LANDING');
+  const [role, setRole] = useState<UserRole | 'SUPER_ADMIN'>('SUPER_ADMIN');
   const [tab, setTab] = useState<'MAIN' | 'ANALYTICS'>('MAIN');
   const [, setTick] = useState(0);
 
-  // Subscribe to reactive store changes
+  // Subscribe to store updates
   useEffect(() => {
     const unsubscribe = store.subscribe(() => {
       setTick(t => t + 1);
@@ -20,19 +24,40 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  const handleRoleChange = (newRole: UserRole) => {
-    store.switchRole(newRole);
+  const handleRoleChange = (newRole: UserRole | 'SUPER_ADMIN') => {
+    if (newRole !== 'SUPER_ADMIN') {
+      store.switchRole(newRole);
+    }
     setRole(newRole);
   };
 
+  const handleLoginSuccess = (userRole: UserRole | 'SUPER_ADMIN') => {
+    handleRoleChange(userRole);
+    setViewMode('APP');
+  };
+
+  if (viewMode === 'LANDING') {
+    return <PublicLandingPage onOpenLogin={() => setViewMode('LOGIN')} />;
+  }
+
+  if (viewMode === 'LOGIN') {
+    return (
+      <LoginView 
+        onLogin={handleLoginSuccess} 
+        onBackToLanding={() => setViewMode('LANDING')} 
+      />
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Universal Top Navigation & Sandbox Role/Analytics Switcher */}
+      {/* Universal Top Navigation */}
       <TopBar 
         currentRole={role} 
         currentTab={tab}
         onRoleChange={handleRoleChange} 
         onTabChange={setTab}
+        onGoToPublic={() => setViewMode('LANDING')}
       />
 
       {/* Surface Switching by Role & Tab */}
@@ -41,9 +66,10 @@ export const App: React.FC = () => {
           <AnalyticsView />
         ) : (
           <>
+            {role === 'SUPER_ADMIN' && <SuperAdminView />}
+            {role === 'ADMIN' && <AdminView />}
             {role === 'CUSTOMER' && <CustomerView />}
             {role === 'PROVIDER' && <ProviderView />}
-            {role === 'ADMIN' && <AdminView />}
           </>
         )}
       </main>
