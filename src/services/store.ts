@@ -468,9 +468,63 @@ class DataStore {
     this.notify();
   }
 
+  public resetToCleanSlate() {
+    this.societies = [];
+    this.towers = [];
+    this.slots = [];
+    this.vehicles = [];
+    this.subscriptions = [];
+    this.jobs = [];
+    this.payments = [];
+    this.complaints = [];
+    this.providers = [];
+    localStorage.removeItem('auracar_vehicles');
+    localStorage.removeItem('auracar_subscriptions');
+    localStorage.removeItem('auracar_jobs');
+    localStorage.removeItem('auracar_societies');
+    localStorage.removeItem('auracar_towers');
+    localStorage.removeItem('auracar_slots');
+    localStorage.removeItem('auracar_providers');
+    this.notify();
+  }
+
+  public seedRealisticDemo() {
+    this.societies = [...INITIAL_SOCIETIES];
+    this.towers = [...INITIAL_TOWERS];
+    this.slots = [...INITIAL_SLOTS];
+    this.vehicles = [...INITIAL_VEHICLES];
+    this.subscriptions = [...INITIAL_SUBSCRIPTIONS];
+    this.jobs = [...INITIAL_JOBS];
+    this.payments = [...INITIAL_PAYMENTS];
+    this.complaints = [...INITIAL_COMPLAINTS];
+    this.providers = [...INITIAL_PROVIDERS];
+    this.notify();
+  }
+
   // Societies & Slots
   public getSocieties(): Society[] {
     return this.societies;
+  }
+
+  public addSociety(data: Omit<Society, 'id' | 'activeCarsCount'>): Society {
+    const newSociety: Society = {
+      ...data,
+      id: `soc_${Date.now()}`,
+      activeCarsCount: 0
+    };
+    this.societies.unshift(newSociety);
+    this.notify();
+    return newSociety;
+  }
+
+  public addProvider(data: Omit<ProviderProfile, 'id'>): ProviderProfile {
+    const newProvider: ProviderProfile = {
+      ...data,
+      id: `prov_${Date.now()}`
+    };
+    this.providers.push(newProvider);
+    this.notify();
+    return newProvider;
   }
 
   public getTowers(societyId: string): BuildingTower[] {
@@ -597,6 +651,55 @@ class DataStore {
     }
     this.notify();
     return sub;
+  }
+
+  public triggerDailyDispatch(targetDate: string = '2026-09-03') {
+    const activeSubs = this.subscriptions.filter(s => s.status === 'ACTIVE');
+    let generatedCount = 0;
+
+    activeSubs.forEach((sub, idx) => {
+      const existingJob = this.jobs.find(j => j.subscriptionId === sub.id && j.serviceDate === targetDate);
+      if (!existingJob) {
+        const vehicle = this.vehicles.find(v => v.id === sub.vehicleId);
+        const assignedProvider = this.providers[idx % (this.providers.length || 1)] || { id: 'prov_ramesh_01', fullName: 'Ramesh Kumar' };
+
+        const newJob: ServiceJob = {
+          id: `job_${sub.id}_${targetDate.replace(/-/g, '')}`,
+          subscriptionId: sub.id,
+          vehicleId: sub.vehicleId,
+          vehicle: vehicle || {
+            id: sub.vehicleId,
+            customerId: 'usr_cust_01',
+            make: 'Toyota',
+            model: 'Fortuner',
+            color: 'Pearl White',
+            registrationNo: 'KA 03 MX 4492',
+            type: 'SUV_LUXURY',
+            societyId: 'soc_plh_01',
+            societyName: 'Prestige Lakeside Habitat',
+            slotId: 'slot_1',
+            slotName: 'Slot B2-104',
+            isActive: true
+          },
+          societyId: vehicle?.societyId || 'soc_plh_01',
+          societyName: vehicle?.societyName || 'Prestige Lakeside Habitat',
+          slotId: vehicle?.slotId || 'slot_1',
+          slotDetails: vehicle?.slotName || 'Tower 1 • Basement 2 • Slot B2-104',
+          walkingSequence: idx + 1,
+          providerId: assignedProvider.id,
+          providerName: assignedProvider.fullName,
+          serviceDate: targetDate,
+          timeWindow: sub.preferredWindow || '06:00 - 08:00 AM',
+          status: 'SCHEDULED'
+        };
+
+        this.jobs.unshift(newJob);
+        generatedCount++;
+      }
+    });
+
+    this.notify();
+    return generatedCount;
   }
 
   // Jobs & Provider Workflow

@@ -88,6 +88,24 @@ export const SuperAdminView: React.FC = () => {
 
     setIsProvisioning(false);
     if (res.success && res.onboardingCredentials) {
+      // Add to reactive store
+      const newSoc = store.addSociety({
+        name,
+        code,
+        addressLine: addressLine || 'Main Avenue',
+        locality: locality || 'City Center',
+        city: city || 'Bengaluru',
+        pincode: pincode || '560001',
+        waterPolicy: 'WATERLESS_ONLY',
+        totalApartments: Number(maxUnits) || 500
+      });
+
+      // Add default tower & slots
+      const tow = store.addTower(newSoc.id, 'Tower 1 (Oak)', 20);
+      store.addSlot(tow.id, 'Basement 1', 'B1-101', 1);
+      store.addSlot(tow.id, 'Basement 1', 'B1-102', 2);
+      store.addSlot(tow.id, 'Basement 2', 'B2-201', 3);
+
       setCreatedCredentials({
         ...res.onboardingCredentials,
         societyName: name

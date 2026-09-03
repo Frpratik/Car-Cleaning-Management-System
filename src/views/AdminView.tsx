@@ -16,7 +16,8 @@ import {
   UserPlus, 
   Layers, 
   Copy, 
-  Check 
+  Check,
+  Zap 
 } from 'lucide-react';
 
 export const AdminView: React.FC = () => {
@@ -105,7 +106,7 @@ export const AdminView: React.FC = () => {
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <Button
             size="sm"
             variant="outline"
@@ -113,6 +114,18 @@ export const AdminView: React.FC = () => {
             onClick={copyInviteLink}
           >
             {copiedLink ? 'Resident Link Copied ✓' : 'Copy Resident Join Link'}
+          </Button>
+
+          <Button
+            size="sm"
+            variant="success"
+            leftIcon={<Zap size={14} />}
+            onClick={() => {
+              const count = store.triggerDailyDispatch();
+              alert(`⚡ Morning Dispatch Complete: Generated ${count} scheduled work orders for today.`);
+            }}
+          >
+            Dispatch Morning Manifest
           </Button>
 
           <Button

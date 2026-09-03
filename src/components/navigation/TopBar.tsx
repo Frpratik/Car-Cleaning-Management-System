@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserRole } from '../../types';
+import { store } from '../../services/store';
 import { notificationService } from '../../services/notificationEngine';
 import { NotificationDrawer } from '../modals/NotificationDrawer';
 import { 
@@ -231,8 +232,48 @@ export const TopBar: React.FC<TopBarProps> = ({
             </button>
           </div>
 
-          {/* Right Action: Notification Bell */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Right Action: Clean Slate & Notification Bell */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => {
+                if (window.confirm('Wipe all data and reset to a clean production state for end-to-end testing?')) {
+                  store.resetToCleanSlate();
+                }
+              }}
+              title="Reset to Clean Slate (0 mock data)"
+              style={{
+                padding: '6px 10px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#EF4444',
+                fontSize: '0.6875rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              🧹 Reset to Clean Slate
+            </button>
+
+            <button
+              onClick={() => {
+                store.seedRealisticDemo();
+              }}
+              title="Load Sample Demo Data"
+              style={{
+                padding: '6px 10px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border-subtle)',
+                color: 'var(--color-text-secondary)',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              🔄 Sample Data
+            </button>
+
             <button
               onClick={() => setShowNotifications(true)}
               style={{
