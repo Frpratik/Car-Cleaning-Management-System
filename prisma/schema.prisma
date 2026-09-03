@@ -50,11 +50,32 @@ model User {
   @@index([role, societyId])
 }
 
+// Single-Use Cryptographic Invitation Tokens
+model InvitationToken {
+  id                String          @id @default(uuid())
+  societyId         String
+  society           Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  email             String
+  role              UserRole        @default(CUSTOMER)
+  tokenHash         String          @unique // SHA256 hashed single-use token
+  apartmentUnitId   String?
+  apartmentUnit     ApartmentUnit?  @relation(fields: [apartmentUnitId], references: [id])
+  isRedeemed        Boolean         @default(false)
+  redeemedAt        DateTime?
+  expiresAt         DateTime
+  createdAt         DateTime        @default(now())
+
+  @@index([tokenHash, isRedeemed, expiresAt])
+}
+
 model CustomerProfile {
   id                String          @id @default(uuid())
   userId            String          @unique
   user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  apartmentNumber   String?         // e.g. "Tower 1 - Flat 1204"
+  
+  apartmentUnitId   String?
+  apartmentUnit     ApartmentUnit?  @relation(fields: [apartmentUnitId], references: [id])
+  apartmentNumber   String?         // Denormalized string e.g. "Tower 1 - Floor 12 - Flat 1204"
   alternatePhone    String?
   
   vehicles          Vehicle[]
@@ -77,6 +98,8 @@ model ProviderProfile {
   payoutUpiId       String?
   ratingAverage     Float           @default(5.0)
   totalJobsDone     Int             @default(0)
+  isOnline          Boolean         @default(true)
+  checkInTime       String?
   
   assignedJobs      ServiceJob[]
 }
@@ -93,10 +116,11 @@ model AdminProfile {
 // -------------------------------------------------------------------------
 
 enum TenantStatus {
-  TRIAL
+  PROVISIONED
+  ONBOARDING
   ACTIVE
   SUSPENDED
-  CANCELLED
+  OFFBOARDED
 }
 
 model Society {
@@ -109,6 +133,7 @@ model Society {
   state                 String              @default("Karnataka")
   pincode               String
   waterPolicy           String              @default("WATERLESS_ONLY")
+  timezone              String              @default("Asia/Kolkata")
   
   tenantStatus          TenantStatus        @default(ACTIVE)
   subscriptionStartDate DateTime            @default(now())
@@ -120,11 +145,13 @@ model Society {
 
   users                 User[]
   towers                BuildingTower[]
+  parkingLevels         ParkingLevel[]
   providers             ProviderProfile[]
   jobs                  ServiceJob[]
   onboardingState       SocietyOnboarding?
   commissionRules       CommissionRule[]
   complaints            Complaint[]
+  invitations           InvitationToken[]
 }
 
 // Public Inbound Sales Lead / Enquiry from Commercial Website
@@ -208,28 +235,69 @@ model AuditLog {
 }
 
 // -------------------------------------------------------------------------
-// 3. Physical Parking Hierarchy (Basement Walking Sequence)
+// 3. Physical Building & Parking Hierarchy
 // -------------------------------------------------------------------------
 
 model BuildingTower {
-  id          String        @id @default(uuid())
+  id          String          @id @default(uuid())
   societyId   String
-  society     Society       @relation(fields: [societyId], references: [id], onDelete: Cascade)
-  name        String        // e.g. "Tower 1 (Oak)"
-  totalFloors Int           @default(29)
+  society     Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  name        String          // e.g. "Tower 1 (Oak)"
+  totalFloors Int             @default(29)
   
+  floors      BuildingFloor[]
   slots       ParkingSlot[]
   
   @@unique([societyId, name])
+}
+
+model BuildingFloor {
+  id          String          @id @default(uuid())
+  towerId     String
+  tower       BuildingTower   @relation(fields: [towerId], references: [id], onDelete: Cascade)
+  floorNumber Int             // e.g. 12
+  floorLabel  String          // e.g. "12th Floor"
+  
+  apartments  ApartmentUnit[]
+
+  @@unique([towerId, floorNumber])
+}
+
+model ApartmentUnit {
+  id          String            @id @default(uuid())
+  floorId     String
+  floor       BuildingFloor     @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  unitNumber  String            // e.g. "1204"
+  unitType    String            @default("3BHK") // 1BHK, 2BHK, 3BHK, 4BHK, PENTHOUSE
+  
+  residents   CustomerProfile[]
+  invitations InvitationToken[]
+
+  @@unique([floorId, unitNumber])
+}
+
+model ParkingLevel {
+  id          String        @id @default(uuid())
+  societyId   String
+  society     Society       @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  name        String        // e.g. "Basement 1", "Basement 2", "Podium Level"
+  code        String        // "B1", "B2", "POD"
+  
+  slots       ParkingSlot[]
+
+  @@unique([societyId, code])
 }
 
 model ParkingSlot {
   id              String        @id @default(uuid())
   towerId         String
   tower           BuildingTower @relation(fields: [towerId], references: [id], onDelete: Cascade)
-  level           String        // "Basement 1", "Basement 2", "Podium"
+  parkingLevelId  String?
+  parkingLevel    ParkingLevel? @relation(fields: [parkingLevelId], references: [id], onDelete: SetNull)
+  level           String        // Denormalized level string e.g. "Basement 2"
   slotNumber      String        // "B2-104"
   walkingSequence Int           @default(0) // Physical ordered sequence for cleaners
+  isOccupied      Boolean       @default(false)
   
   vehicles        Vehicle[]
   jobs            ServiceJob[]
@@ -256,7 +324,7 @@ model Vehicle {
   make            String          // e.g. "Toyota"
   model           String          // e.g. "Fortuner"
   color           String          // e.g. "Pearl White"
-  registrationNo  String          @unique
+  registrationNo  String          @unique // e.g. "KA 03 MX 4492"
   type            VehicleType     @default(SEDAN)
   slotId          String
   parkingSlot     ParkingSlot     @relation(fields: [slotId], references: [id])
@@ -381,7 +449,7 @@ model ServiceProof {
 }
 
 // -------------------------------------------------------------------------
-// 6. Payments, Ratings & Dispute Resolution
+// 6. Payments, Invoicing & Webhook Idempotency
 // -------------------------------------------------------------------------
 
 enum PaymentStatus {
@@ -406,6 +474,19 @@ model Payment {
   razorpayPaymentId String?         @unique
   paymentMethod     String          @default("UPI_AUTOPAY")
   createdAt         DateTime        @default(now())
+}
+
+// Webhook Idempotency Event Registry
+model PaymentWebhookEvent {
+  id                String          @id @default(uuid())
+  eventId           String          @unique // Razorpay event_id
+  eventType         String          // payment.captured, payment.failed, etc.
+  payloadJson       String
+  isProcessed       Boolean         @default(false)
+  processedAt       DateTime?
+  createdAt         DateTime        @default(now())
+
+  @@index([eventId, isProcessed])
 }
 
 model Rating {

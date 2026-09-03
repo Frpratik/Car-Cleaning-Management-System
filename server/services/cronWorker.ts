@@ -11,7 +11,7 @@ export interface DispatchRunResult {
 export class MidnightJobDispatcher {
   /**
    * Idempotent batch worker that generates morning work orders for all active societies.
-   * Can be triggered via cron at 12:00 AM daily or called programmatically.
+   * Can be triggered via cron at 12:00 AM daily or called programmatically by Society Admins.
    */
   public static async runDailyDispatch(targetDate?: Date): Promise<DispatchRunResult> {
     const today = targetDate || new Date();
@@ -56,20 +56,20 @@ export class MidnightJobDispatcher {
 
       // Filter by plan frequency and vacation pause
       const eligibleSubs = activeSubscriptions.filter(sub => {
-        // Check vacation pause
+        // Check vacation pause: suppress jobs during pause
         if (sub.pausedUntil && new Date(sub.pausedUntil) > today) {
           return false;
         }
 
-        // Check frequency
+        // Check plan frequency
         switch (sub.plan.frequency) {
           case 'DAILY':
-            return dayOfWeek !== 0; // Mon - Sat
+            return dayOfWeek !== 0; // Mon - Sat (Sunday off)
           case 'ALTERNATE_DAYS':
           case 'THREE_WEEKLY':
             return dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5; // Mon, Wed, Fri
           case 'WEEKLY':
-            return dayOfWeek === 6; // Saturday
+            return dayOfWeek === 6; // Saturday only
           default:
             return true;
         }
@@ -82,7 +82,7 @@ export class MidnightJobDispatcher {
         cleanersDeployed += activeProviders.length;
       }
 
-      // Sort vehicles by basement walking sequence
+      // Sort vehicles by basement walking sequence (1 -> 2 -> 3)
       eligibleSubs.sort((a, b) => 
         (a.vehicle.parkingSlot.walkingSequence || 0) - (b.vehicle.parkingSlot.walkingSequence || 0)
       );
@@ -120,7 +120,7 @@ export class MidnightJobDispatcher {
           });
           totalJobsCreated++;
         } catch {
-          // Ignore unique conflicts during idempotent runs
+          // Idempotent catch
         }
       }
     }

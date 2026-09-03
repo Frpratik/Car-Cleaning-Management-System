@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 import { authenticateToken, requireRoles } from '../middleware/auth';
 import { enforceTenantIsolation } from '../middleware/tenantGuard';
@@ -16,23 +17,36 @@ const createSocietySchema = z.object({
   state: z.string().default('Karnataka'),
   pincode: z.string().min(6),
   waterPolicy: z.string().default('WATERLESS_ONLY'),
+  timezone: z.string().default('Asia/Kolkata'),
   maxUnits: z.number().int().positive().default(500),
   adminFullName: z.string().min(2),
   adminEmail: z.string().email(),
   adminPhone: z.string().min(10)
 });
 
-// 1. POST /api/societies (Super Admin Only: Provision New Society & Society Admin Account)
+const addTowerSchema = z.object({
+  name: z.string().min(1),
+  totalFloors: z.number().int().min(1).default(20)
+});
+
+const addParkingSlotSchema = z.object({
+  towerId: z.string().uuid(),
+  level: z.string().min(1),
+  slotNumber: z.string().min(1),
+  walkingSequence: z.number().int().min(1).default(1)
+});
+
+// 1. POST /api/societies (Super Admin Only: Provision New Society & Secure Single-Use Invite Token)
 router.post('/', authenticateToken, requireRoles(['SUPER_ADMIN']), async (req: Request, res: Response): Promise<void> => {
   try {
     const data = createSocietySchema.parse(req.body);
 
-    // Generate random temporary password for the society admin
-    const tempPassword = `Aura@${Math.random().toString(36).substring(2, 8)}!`;
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash(tempPassword, salt);
+    // Generate single-use secure invite token for the Society Admin
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days valid
 
-    // Atomic transaction: create Society, Society Admin user, and Onboarding record
+    // Atomic transaction: create Society, Onboarding, and Invitation Token
     const result = await prisma.$transaction(async (tx) => {
       const society = await tx.society.create({
         data: {
@@ -44,8 +58,9 @@ router.post('/', authenticateToken, requireRoles(['SUPER_ADMIN']), async (req: R
           state: data.state,
           pincode: data.pincode,
           waterPolicy: data.waterPolicy,
+          timezone: data.timezone,
           maxUnits: data.maxUnits,
-          tenantStatus: 'ACTIVE',
+          tenantStatus: 'PROVISIONED',
           onboardingState: {
             create: {
               currentStep: 1,
@@ -55,20 +70,13 @@ router.post('/', authenticateToken, requireRoles(['SUPER_ADMIN']), async (req: R
         }
       });
 
-      const adminUser = await tx.user.create({
+      const invite = await tx.invitationToken.create({
         data: {
-          fullName: data.adminFullName,
-          email: data.adminEmail,
-          phoneNumber: data.adminPhone,
-          passwordHash,
-          role: 'SOCIETY_ADMIN',
           societyId: society.id,
-          mustResetPassword: true,
-          adminProfile: {
-            create: {
-              department: 'RWA_MANAGEMENT'
-            }
-          }
+          email: data.adminEmail,
+          role: 'SOCIETY_ADMIN',
+          tokenHash,
+          expiresAt
         }
       });
 
@@ -82,18 +90,21 @@ router.post('/', authenticateToken, requireRoles(['SUPER_ADMIN']), async (req: R
         }
       });
 
-      return { society, adminUser, tempPassword };
+      return { society, invite };
     });
+
+    const inviteUrl = `${req.protocol}://${req.get('host')}/setup-account?token=${rawToken}`;
 
     res.status(201).json({
       success: true,
-      message: 'Society and Society Admin provisioned successfully.',
+      message: 'Society provisioned successfully. Single-use invitation generated.',
       society: result.society,
-      onboardingCredentials: {
-        adminEmail: result.adminUser.email,
-        adminPhone: result.adminUser.phoneNumber,
-        tempPassword: result.tempPassword,
-        loginUrl: `${req.protocol}://${req.get('host')}/login`
+      onboardingPackage: {
+        adminEmail: data.adminEmail,
+        adminPhone: data.adminPhone,
+        inviteUrl,
+        rawToken,
+        expiresAt: result.invite.expiresAt
       }
     });
   } catch (err: any) {
@@ -148,11 +159,13 @@ router.get('/:societyId', authenticateToken, enforceTenantIsolation, async (req:
       include: {
         towers: {
           include: {
+            floors: { include: { apartments: true } },
             slots: {
               include: { vehicles: true }
             }
           }
         },
+        parkingLevels: { include: { slots: true } },
         providers: {
           include: { user: true }
         },
@@ -171,63 +184,96 @@ router.get('/:societyId', authenticateToken, enforceTenantIsolation, async (req:
   }
 });
 
-// 4. POST /api/societies/:societyId/towers (Add Building Tower)
-router.post('/:societyId/towers', authenticateToken, requireRoles(['SUPER_ADMIN', 'SOCIETY_ADMIN']), enforceTenantIsolation, async (req: Request, res: Response): Promise<void> => {
+// 4. POST /api/societies/:societyId/towers (Add Tower with Floors)
+router.post('/:societyId/towers', authenticateToken, enforceTenantIsolation, requireRoles(['SUPER_ADMIN', 'SOCIETY_ADMIN']), async (req: Request, res: Response): Promise<void> => {
   try {
     const { societyId } = req.params;
-    const { name, totalFloors } = req.body;
+    const { name, totalFloors } = addTowerSchema.parse(req.body);
 
-    const tower = await prisma.buildingTower.create({
-      data: {
-        societyId,
-        name,
-        totalFloors: totalFloors || 20
-      }
+    const tower = await prisma.$transaction(async (tx) => {
+      const createdTower = await tx.buildingTower.create({
+        data: {
+          societyId,
+          name,
+          totalFloors
+        }
+      });
+
+      // Auto-generate floor entities for this tower
+      const floorData = Array.from({ length: totalFloors }, (_, idx) => ({
+        towerId: createdTower.id,
+        floorNumber: idx + 1,
+        floorLabel: `Floor ${idx + 1}`
+      }));
+
+      await tx.buildingFloor.createMany({ data: floorData });
+
+      return createdTower;
     });
 
     res.status(201).json({ success: true, tower });
   } catch (err: any) {
-    res.status(400).json({ success: false, error: err.message });
+    res.status(400).json({ success: false, error: err.message || 'Failed to add tower.' });
   }
 });
 
-// 5. POST /api/societies/:societyId/slots (Add Parking Slot with Walking Sequence)
-router.post('/:societyId/slots', authenticateToken, requireRoles(['SUPER_ADMIN', 'SOCIETY_ADMIN']), enforceTenantIsolation, async (req: Request, res: Response): Promise<void> => {
+// 5. POST /api/societies/:societyId/slots (Add Parking Slot)
+router.post('/:societyId/slots', authenticateToken, enforceTenantIsolation, requireRoles(['SUPER_ADMIN', 'SOCIETY_ADMIN']), async (req: Request, res: Response): Promise<void> => {
   try {
-    const { towerId, level, slotNumber, walkingSequence } = req.body;
+    const { towerId, level, slotNumber, walkingSequence } = addParkingSlotSchema.parse(req.body);
 
     const slot = await prisma.parkingSlot.create({
       data: {
         towerId,
         level,
         slotNumber,
-        walkingSequence: walkingSequence || 0
+        walkingSequence
       }
     });
 
     res.status(201).json({ success: true, slot });
   } catch (err: any) {
-    res.status(400).json({ success: false, error: err.message });
+    res.status(400).json({ success: false, error: err.message || 'Failed to add parking slot.' });
   }
 });
 
-// 6. PATCH /api/societies/:societyId/onboarding (Update 9-step progress)
-router.patch('/:societyId/onboarding', authenticateToken, requireRoles(['SUPER_ADMIN', 'SOCIETY_ADMIN']), enforceTenantIsolation, async (req: Request, res: Response): Promise<void> => {
+// 6. POST /api/societies/:societyId/bulk-import-slots (Transactional Bulk Import)
+router.post('/:societyId/bulk-import-slots', authenticateToken, enforceTenantIsolation, requireRoles(['SUPER_ADMIN', 'SOCIETY_ADMIN']), async (req: Request, res: Response): Promise<void> => {
   try {
-    const { societyId } = req.params;
-    const updateData = req.body;
+    const { slots } = req.body; // Array of { towerId, level, slotNumber, walkingSequence }
 
-    const updated = await prisma.societyOnboarding.update({
-      where: { societyId },
-      data: {
-        ...updateData,
-        updatedAt: new Date()
+    if (!Array.isArray(slots) || slots.length === 0) {
+      res.status(400).json({ success: false, error: 'Valid slots array is required.' });
+      return;
+    }
+
+    const createdCount = await prisma.$transaction(async (tx) => {
+      let count = 0;
+      for (const item of slots) {
+        await tx.parkingSlot.upsert({
+          where: {
+            towerId_level_slotNumber: {
+              towerId: item.towerId,
+              level: item.level,
+              slotNumber: item.slotNumber
+            }
+          },
+          update: { walkingSequence: item.walkingSequence || 0 },
+          create: {
+            towerId: item.towerId,
+            level: item.level,
+            slotNumber: item.slotNumber,
+            walkingSequence: item.walkingSequence || 0
+          }
+        });
+        count++;
       }
+      return count;
     });
 
-    res.json({ success: true, onboarding: updated });
+    res.status(201).json({ success: true, message: `Successfully imported ${createdCount} parking slots.` });
   } catch (err: any) {
-    res.status(400).json({ success: false, error: err.message });
+    res.status(400).json({ success: false, error: err.message || 'Bulk slot import failed.' });
   }
 });
 
