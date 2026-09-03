@@ -186,6 +186,18 @@ export interface ComplaintTicket {
   proof?: ServiceProof;
 }
 
+export interface SocietyEnquiry {
+  id: string;
+  societyName: string;
+  contactPerson: string;
+  email: string;
+  phoneNumber: string;
+  city: string;
+  estimatedUnits: number;
+  status: 'NEW' | 'CONTACTED' | 'DEMO_SCHEDULED' | 'PROPOSAL_SENT' | 'CONVERTED' | 'CLOSED';
+  createdAt: string;
+}
+
 export interface DashboardMetricSummary {
   totalActiveSubscriptions: number;
   todayScheduledJobs: number;

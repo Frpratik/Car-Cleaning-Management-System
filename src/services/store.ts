@@ -10,7 +10,8 @@ import {
   User, 
   DashboardMetricSummary,
   PaymentTransaction,
-  ComplaintTicket
+  ComplaintTicket,
+  SocietyEnquiry
 } from '../types';
 
 // ==========================================
@@ -389,6 +390,19 @@ class DataStore {
   private jobs: ServiceJob[] = [...INITIAL_JOBS];
   private payments: PaymentTransaction[] = [...INITIAL_PAYMENTS];
   private complaints: ComplaintTicket[] = [...INITIAL_COMPLAINTS];
+  private enquiries: SocietyEnquiry[] = [
+    {
+      id: 'enq_01',
+      societyName: 'Brigade Cornerstone Utopia',
+      contactPerson: 'Karan Mehra (Secretary)',
+      email: 'karan.mehra@utopia-rwa.in',
+      phoneNumber: '9845012345',
+      city: 'Bengaluru (Varthur)',
+      estimatedUnits: 4200,
+      status: 'DEMO_SCHEDULED',
+      createdAt: '2026-09-02'
+    }
+  ];
   private currentUser: User = INITIAL_CUSTOMERS[0];
   private listeners: (() => void)[] = [];
 
@@ -406,6 +420,12 @@ class DataStore {
 
       const savedJobs = localStorage.getItem('auracar_jobs');
       if (savedJobs) this.jobs = JSON.parse(savedJobs);
+
+      const savedEnquiries = localStorage.getItem('auracar_enquiries');
+      if (savedEnquiries) this.enquiries = JSON.parse(savedEnquiries);
+
+      const savedSocieties = localStorage.getItem('auracar_societies');
+      if (savedSocieties) this.societies = JSON.parse(savedSocieties);
     } catch {
       // Fallback to memory defaults
     }
@@ -416,6 +436,8 @@ class DataStore {
       localStorage.setItem('auracar_vehicles', JSON.stringify(this.vehicles));
       localStorage.setItem('auracar_subscriptions', JSON.stringify(this.subscriptions));
       localStorage.setItem('auracar_jobs', JSON.stringify(this.jobs));
+      localStorage.setItem('auracar_enquiries', JSON.stringify(this.enquiries));
+      localStorage.setItem('auracar_societies', JSON.stringify(this.societies));
     } catch {
       // Ignore in restricted environments
     }
@@ -499,6 +521,31 @@ class DataStore {
     this.complaints = [...INITIAL_COMPLAINTS];
     this.providers = [...INITIAL_PROVIDERS];
     this.notify();
+  }
+
+  // Inbound B2B Society Enquiries
+  public getEnquiries(): SocietyEnquiry[] {
+    return this.enquiries;
+  }
+
+  public addEnquiry(data: Omit<SocietyEnquiry, 'id' | 'createdAt' | 'status'>): SocietyEnquiry {
+    const newEnquiry: SocietyEnquiry = {
+      ...data,
+      id: `enq_${Date.now()}`,
+      status: 'NEW',
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    this.enquiries.unshift(newEnquiry);
+    this.notify();
+    return newEnquiry;
+  }
+
+  public updateEnquiryStatus(id: string, status: SocietyEnquiry['status']) {
+    const enq = this.enquiries.find(e => e.id === id);
+    if (enq) {
+      enq.status = status;
+      this.notify();
+    }
   }
 
   // Societies & Slots

@@ -1,3 +1,5 @@
+import { store } from './store';
+
 export interface EnquiryPayload {
   societyName: string;
   contactPerson: string;
@@ -28,6 +30,16 @@ export class ApiClient {
   private static baseUrl = '/api';
 
   public static async submitEnquiry(payload: EnquiryPayload) {
+    // Always register in local reactive store for instant E2E reflection
+    store.addEnquiry({
+      societyName: payload.societyName,
+      contactPerson: payload.contactPerson,
+      email: payload.email,
+      phoneNumber: payload.phoneNumber,
+      city: payload.city,
+      estimatedUnits: payload.estimatedUnits || 500
+    });
+
     try {
       const res = await fetch(`${this.baseUrl}/enquiries`, {
         method: 'POST',

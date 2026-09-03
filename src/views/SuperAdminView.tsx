@@ -18,33 +18,8 @@ import {
 
 export const SuperAdminView: React.FC = () => {
   const societies = store.getSocieties();
+  const leads = store.getEnquiries();
   const [activeTab, setActiveTab] = useState<'LEADS' | 'CREATE_SOCIETY' | 'SOCIETIES' | 'AUDIT'>('LEADS');
-
-  // Leads State
-  const [leads, setLeads] = useState([
-    {
-      id: 'enq_01',
-      societyName: 'Godrej Woodsman Estate',
-      contactPerson: 'Vivek Sharma (RWA President)',
-      email: 'rwa.woodsman@gmail.com',
-      phoneNumber: '9845099881',
-      city: 'Bengaluru (Hebbal)',
-      estimatedUnits: 650,
-      status: 'NEW',
-      createdAt: '2026-09-03 14:15'
-    },
-    {
-      id: 'enq_02',
-      societyName: 'Adarsh Palm Retreat',
-      contactPerson: 'Rajesh Nair (Facility Head)',
-      email: 'rajesh.nair@apr-condo.com',
-      phoneNumber: '9731022334',
-      city: 'Bengaluru (Bellandur)',
-      estimatedUnits: 1200,
-      status: 'DEMO_SCHEDULED',
-      createdAt: '2026-09-02 11:30'
-    }
-  ]);
 
   // Create Society Form State
   const [name, setName] = useState('');
@@ -137,7 +112,7 @@ Temporary Password: ${createdCredentials.tempPassword}
   };
 
   const handleUpdateLeadStatus = (leadId: string, newStatus: string) => {
-    setLeads(leads.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+    store.updateEnquiryStatus(leadId, newStatus as any);
   };
 
   return (
@@ -303,7 +278,19 @@ Temporary Password: ${createdCredentials.tempPassword}
               </tr>
             </thead>
             <tbody>
-              {leads.map(lead => (
+              {leads.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: '32px 14px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                    <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
+                      No Inbound Leads Yet
+                    </div>
+                    <div style={{ fontSize: '0.75rem' }}>
+                      Submit the "Bring Car Care to Your Society" form on the public landing page to see leads appear here instantly.
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                leads.map(lead => (
                 <tr key={lead.id} style={{ borderBottom: '1px solid var(--color-border-subtle)' }}>
                   <td style={{ padding: '14px' }}>
                     <div style={{ fontWeight: 800, color: '#ffffff', fontSize: '0.9375rem' }}>{lead.societyName}</div>
@@ -358,7 +345,7 @@ Temporary Password: ${createdCredentials.tempPassword}
                     </Button>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
