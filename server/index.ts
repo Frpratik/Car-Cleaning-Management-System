@@ -8,6 +8,7 @@ import { env } from './config/env';
 import authRoutes from './routes/auth.routes';
 import enquiryRoutes from './routes/enquiry.routes';
 import societyRoutes from './routes/society.routes';
+import paymentRoutes from './routes/payment.routes';
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/enquiries', enquiryRoutes);
 app.use('/api/societies', societyRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // 404 Handler for API
 app.use('/api/*', (req: Request, res: Response) => {
