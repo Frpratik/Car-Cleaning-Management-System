@@ -18,17 +18,31 @@ import {
 } from 'lucide-react';
 
 interface SocietyOnboardingWizardProps {
-  societyId: string;
+  societyId?: string;
   onComplete: () => void;
   onExit: () => void;
 }
+
+const FALLBACK_SOCIETY = {
+  id: 'soc_plh_01',
+  name: 'Prestige Lakeside Habitat',
+  code: 'PLH-BLR',
+  addressLine: 'SH 35, Varthur, Whitefield',
+  locality: 'Whitefield',
+  city: 'Bengaluru',
+  pincode: '560087',
+  waterPolicy: 'WATERLESS_ONLY',
+  totalApartments: 3400,
+  activeCarsCount: 0
+};
 
 export const SocietyOnboardingWizard: React.FC<SocietyOnboardingWizardProps> = ({
   societyId,
   onComplete,
   onExit
 }) => {
-  const society = store.getSocieties().find(s => s.id === societyId) || store.getSocieties()[0];
+  const allSocieties = store.getSocieties();
+  const society = allSocieties.find(s => s.id === societyId) || allSocieties[0] || FALLBACK_SOCIETY;
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   // Form States
@@ -52,7 +66,9 @@ export const SocietyOnboardingWizard: React.FC<SocietyOnboardingWizardProps> = (
   const handleAddTower = () => {
     if (towerName.trim()) {
       setTowersList([...towersList, towerName.trim()]);
-      store.addTower(society.id, towerName.trim(), Number(towerFloors));
+      if (allSocieties.some(s => s.id === society.id)) {
+        store.addTower(society.id, towerName.trim(), Number(towerFloors));
+      }
       setTowerName('');
     }
   };

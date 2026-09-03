@@ -77,8 +77,14 @@ export const AdminView: React.FC = () => {
     }
   };
 
+  const currentSociety = societies[0] || {
+    id: 'soc_plh_01',
+    name: 'Prestige Lakeside Habitat',
+    code: 'PLH-BLR'
+  };
+
   const copyInviteLink = () => {
-    const inviteUrl = `${window.location.origin}/join/PLH-BLR`;
+    const inviteUrl = `${window.location.origin}/join/${currentSociety.code || 'PLH-BLR'}`;
     navigator.clipboard.writeText(inviteUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 3000);
@@ -87,7 +93,7 @@ export const AdminView: React.FC = () => {
   if (showSetupWizard) {
     return (
       <SocietyOnboardingWizard
-        societyId={societies[0]?.id || 'soc_plh_01'}
+        societyId={currentSociety.id}
         onComplete={() => setShowSetupWizard(false)}
         onExit={() => setShowSetupWizard(false)}
       />
