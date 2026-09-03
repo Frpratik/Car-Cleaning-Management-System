@@ -1,0 +1,279 @@
+// AuraCar Precision Car Care OS Database Schema
+// Optimized for Residential Gated Communities & Density Operations
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  CUSTOMER
+  PROVIDER
+  ADMIN
+  SOCIETY_MANAGER
+}
+
+model User {
+  id            String          @id @default(uuid())
+  phoneNumber   String          @unique
+  email         String?         @unique
+  fullName      String
+  role          UserRole        @default(CUSTOMER)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  customer      CustomerProfile?
+  provider      ProviderProfile?
+  admin         AdminProfile?
+}
+
+model CustomerProfile {
+  id               String          @id @default(uuid())
+  userId           String          @unique
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alternatePhone   String?
+  defaultSocietyId String?
+  
+  vehicles         Vehicle[]
+  subscriptions    Subscription[]
+  payments         Payment[]
+  ratings          Rating[]
+}
+
+model ProviderProfile {
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeNumber       String          @unique
+  assignedSocietyId String?
+  society           Society?        @relation(fields: [assignedSocietyId], references: [id])
+  isVerified        Boolean         @default(false)
+  kycDocType        String?         // AADHAAR, VOTER_ID, DRIVING_LICENSE
+  kycDocNumber      String?
+  payoutUpiId       String?
+  ratingAverage     Float           @default(5.0)
+  totalJobsDone     Int             @default(0)
+  
+  assignedJobs      ServiceJob[]
+}
+
+model AdminProfile {
+  id            String          @id @default(uuid())
+  userId        String          @unique
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department    String          @default("OPERATIONS")
+}
+
+model Society {
+  id                String          @id @default(uuid())
+  name              String          // e.g. "Prestige Lakeside Habitat"
+  code              String          @unique // e.g. "PLH-BLR"
+  addressLine       String
+  locality          String          // e.g. "Whitefield"
+  city              String          // e.g. "Bengaluru"
+  pincode           String
+  waterPolicy       String          @default("WATERLESS_ONLY")
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+
+  towers            BuildingTower[]
+  providers         ProviderProfile[]
+  jobs              ServiceJob[]
+}
+
+model BuildingTower {
+  id          String        @id @default(uuid())
+  societyId   String
+  society     Society       @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  name        String        // e.g. "Tower 1 (Oak)"
+  totalFloors Int           @default(29)
+  
+  slots       ParkingSlot[]
+  
+  @@unique([societyId, name])
+}
+
+model ParkingSlot {
+  id              String        @id @default(uuid())
+  towerId         String
+  tower           BuildingTower @relation(fields: [towerId], references: [id], onDelete: Cascade)
+  level           String        // "Basement 1", "Basement 2", "Podium"
+  slotNumber      String        // "B2-104"
+  walkingSequence Int           @default(0)
+  
+  vehicles        Vehicle[]
+  jobs            ServiceJob[]
+
+  @@unique([towerId, level, slotNumber])
+  @@index([walkingSequence])
+}
+
+enum VehicleType {
+  HATCHBACK
+  SEDAN
+  COMPACT_SUV
+  SUV_LUXURY
+}
+
+model Vehicle {
+  id              String          @id @default(uuid())
+  customerId      String
+  customer        CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  make            String
+  model           String
+  color           String
+  registrationNo  String          @unique
+  type            VehicleType     @default(SEDAN)
+  slotId          String
+  parkingSlot     ParkingSlot     @relation(fields: [slotId], references: [id])
+  notes           String?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+
+  subscriptions   Subscription[]
+  jobs            ServiceJob[]
+}
+
+enum PlanFrequency {
+  DAILY
+  ALTERNATE_DAYS
+  THREE_WEEKLY
+  WEEKLY
+}
+
+model ServicePlan {
+  id              String          @id @default(uuid())
+  name            String
+  code            String          @unique
+  frequency       PlanFrequency   @default(DAILY)
+  description     String
+  hatchbackPrice  Int
+  sedanPrice      Int
+  suvPrice        Int
+  inclusions      String[]
+  isActive        Boolean         @default(true)
+
+  subscriptions   Subscription[]
+}
+
+enum SubscriptionStatus {
+  DRAFT
+  PENDING_PAYMENT
+  ACTIVE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
+
+model Subscription {
+  id              String              @id @default(uuid())
+  customerId      String
+  customer        CustomerProfile     @relation(fields: [customerId], references: [id])
+  vehicleId       String
+  vehicle         Vehicle             @relation(fields: [vehicleId], references: [id])
+  servicePlanId   String
+  plan            ServicePlan         @relation(fields: [servicePlanId], references: [id])
+  status          SubscriptionStatus  @default(PENDING_PAYMENT)
+  monthlyAmount   Int
+  startDate       DateTime
+  endDate         DateTime?
+  nextBillingDate DateTime?
+  preferredWindow String              @default("06:00-08:00")
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  jobs            ServiceJob[]
+  payments        Payment[]
+
+  @@index([status, nextBillingDate])
+}
+
+enum JobStatus {
+  SCHEDULED
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+  UNABLE_TO_SERVICE
+  CANCELLED
+}
+
+model ServiceJob {
+  id                String          @id @default(uuid())
+  subscriptionId    String
+  subscription      Subscription    @relation(fields: [subscriptionId], references: [id])
+  vehicleId         String
+  vehicle           Vehicle         @relation(fields: [vehicleId], references: [id])
+  societyId         String
+  society           Society         @relation(fields: [societyId], references: [id])
+  slotId            String
+  parkingSlot       ParkingSlot     @relation(fields: [slotId], references: [id])
+  providerId        String?
+  provider          ProviderProfile? @relation(fields: [providerId], references: [id])
+  
+  serviceDate       DateTime
+  timeWindow        String
+  status            JobStatus       @default(SCHEDULED)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  exceptionReason   String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  proof             ServiceProof?
+  rating            Rating?
+
+  @@unique([vehicleId, serviceDate])
+  @@index([societyId, serviceDate, status])
+}
+
+model ServiceProof {
+  id              String      @id @default(uuid())
+  jobId           String      @unique
+  job             ServiceJob  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  beforePhotoUrl  String
+  afterPhotoUrl   String
+  beforeTakenAt   DateTime
+  afterTakenAt    DateTime
+  syncTimestamp   DateTime    @default(now())
+  durationMinutes Int         @default(15)
+  watermarkHash   String?
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id                String          @id @default(uuid())
+  subscriptionId    String
+  subscription      Subscription    @relation(fields: [subscriptionId], references: [id])
+  customerId        String
+  customer          CustomerProfile @relation(fields: [customerId], references: [id])
+  amount            Int
+  currency          String          @default("INR")
+  status            PaymentStatus   @default(PENDING)
+  razorpayOrderId   String?         @unique
+  razorpayPaymentId String?         @unique
+  createdAt         DateTime        @default(now())
+}
+
+model Rating {
+  id          String      @id @default(uuid())
+  jobId       String      @unique
+  job         ServiceJob  @relation(fields: [jobId], references: [id])
+  customerId  String
+  customer    CustomerProfile @relation(fields: [customerId], references: [id])
+  score       Int
+  feedback    String?
+  createdAt   DateTime    @default(now())
+}
