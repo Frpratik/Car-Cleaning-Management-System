@@ -11,7 +11,7 @@ import { ProviderView } from './views/ProviderView';
 
 export const App: React.FC = () => {
   // Session State: null = Public Website, 'LOGIN' = Sign In Modal, or UserRole
-  const [activeSessionRole, setActiveSessionRole] = useState<UserRole | 'SUPER_ADMIN' | 'LOGIN' | null>('SUPER_ADMIN');
+  const [activeSessionRole, setActiveSessionRole] = useState<UserRole | 'SUPER_ADMIN' | 'LOGIN' | null>(null);
   const [, setTick] = useState(0);
 
   // Subscribe to reactive store changes

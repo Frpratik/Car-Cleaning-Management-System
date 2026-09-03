@@ -189,42 +189,66 @@ export const CustomerView: React.FC = () => {
         </div>
 
         {/* Vehicle Carousel Pills */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {vehicles.map(veh => {
-            const isSelected = veh.id === activeVehicle?.id;
-            return (
-              <button
-                key={veh.id}
-                onClick={() => setSelectedVehicleId(veh.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: isSelected ? 'var(--color-bg-elevated)' : 'var(--color-bg-surface)',
-                  border: `1px solid ${isSelected ? 'var(--color-brand-primary)' : 'var(--color-border-subtle)'}`,
-                  color: isSelected ? '#ffffff' : 'var(--color-text-secondary)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <Car size={16} color={isSelected ? 'var(--color-brand-primary)' : 'var(--color-text-muted)'} />
-                <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>
-                  {veh.make} {veh.model}
-                </span>
-                <span style={{ fontSize: '0.6875rem', opacity: 0.7 }}>
-                  {veh.registrationNo}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {vehicles.length > 0 ? (
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {vehicles.map(veh => {
+              const isSelected = veh.id === activeVehicle?.id;
+              return (
+                <button
+                  key={veh.id}
+                  onClick={() => setSelectedVehicleId(veh.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: isSelected ? 'var(--color-bg-elevated)' : 'var(--color-bg-surface)',
+                    border: `1px solid ${isSelected ? 'var(--color-brand-primary)' : 'var(--color-border-subtle)'}`,
+                    color: isSelected ? '#ffffff' : 'var(--color-text-secondary)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all var(--transition-fast)'
+                  }}
+                >
+                  <Car size={16} color={isSelected ? 'var(--color-brand-primary)' : 'var(--color-text-muted)'} />
+                  <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>
+                    {veh.make} {veh.model}
+                  </span>
+                  <span style={{ fontSize: '0.6875rem', opacity: 0.7 }}>
+                    {veh.registrationNo}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
-      {/* 2. Main Service Card (Calm, High-Information Density) */}
-      {activeVehicle ? (
+      {/* 2. Main Service Card or Empty State */}
+      {vehicles.length === 0 ? (
+        <div
+          style={{
+            backgroundColor: 'var(--color-bg-surface)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--color-border-subtle)',
+            padding: '40px 24px',
+            textAlign: 'center',
+            marginBottom: '20px'
+          }}
+        >
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Car size={28} />
+          </div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', marginBottom: '6px' }}>No Vehicles Registered Yet</h3>
+          <p style={{ fontSize: '0.8125rem', color: '#94A3B8', maxWidth: '380px', margin: '0 auto 20px' }}>
+            Add your vehicle and parking slot details to schedule waterless morning maintenance.
+          </p>
+          <Button size="md" variant="primary" leftIcon={<Plus size={16} />} onClick={() => setShowAddVehicleModal(true)}>
+            + Register Your Vehicle
+          </Button>
+        </div>
+      ) : activeVehicle ? (
         <div
           style={{
             backgroundColor: 'var(--color-bg-surface)',

@@ -15,64 +15,12 @@ import {
 } from '../types';
 
 // ==========================================
-// SEED DATA (Isolated & High-Fidelity Indian Context)
+// SEED DATA (Clean Production Baseline)
 // ==========================================
 
-export const INITIAL_SOCIETIES: Society[] = [
-  {
-    id: 'soc_plh_01',
-    name: 'Prestige Lakeside Habitat',
-    code: 'PLH-BLR',
-    addressLine: 'SH 35, Varthur, Whitefield',
-    locality: 'Whitefield',
-    city: 'Bengaluru',
-    pincode: '560087',
-    waterPolicy: 'WATERLESS_ONLY',
-    totalApartments: 3400,
-    activeCarsCount: 84
-  },
-  {
-    id: 'soc_sda_02',
-    name: 'Sobha Dream Acres',
-    code: 'SDA-BLR',
-    addressLine: 'Panathur Main Road, Balagere',
-    locality: 'Panathur',
-    city: 'Bengaluru',
-    pincode: '560087',
-    waterPolicy: 'WATERLESS_ONLY',
-    totalApartments: 6500,
-    activeCarsCount: 142
-  },
-  {
-    id: 'soc_gde_03',
-    name: 'Godrej Eternity',
-    code: 'GDE-BLR',
-    addressLine: 'Holiday Village Road, Kanakapura Road',
-    locality: 'Kanakapura Road',
-    city: 'Bengaluru',
-    pincode: '560062',
-    waterPolicy: 'LOW_WATER',
-    totalApartments: 800,
-    activeCarsCount: 46
-  }
-];
-
-export const INITIAL_TOWERS: BuildingTower[] = [
-  { id: 'tow_plh_t1', societyId: 'soc_plh_01', name: 'Tower 1 (Oak)', totalFloors: 29 },
-  { id: 'tow_plh_t2', societyId: 'soc_plh_01', name: 'Tower 2 (Cedar)', totalFloors: 29 },
-  { id: 'tow_plh_t3', societyId: 'soc_plh_01', name: 'Tower 3 (Maple)', totalFloors: 29 },
-  { id: 'tow_sda_w1', societyId: 'soc_sda_02', name: 'Wing 1 (Rainforest)', totalFloors: 14 },
-  { id: 'tow_sda_w2', societyId: 'soc_sda_02', name: 'Wing 2 (Pine)', totalFloors: 14 }
-];
-
-export const INITIAL_SLOTS: ParkingSlot[] = [
-  { id: 'slot_01', towerId: 'tow_plh_t1', towerName: 'Tower 1 (Oak)', level: 'Basement 2', slotNumber: 'B2-104', walkingSequence: 1 },
-  { id: 'slot_02', towerId: 'tow_plh_t1', towerName: 'Tower 1 (Oak)', level: 'Basement 2', slotNumber: 'B2-108', walkingSequence: 2 },
-  { id: 'slot_03', towerId: 'tow_plh_t1', towerName: 'Tower 1 (Oak)', level: 'Basement 2', slotNumber: 'B2-112', walkingSequence: 3 },
-  { id: 'slot_04', towerId: 'tow_plh_t1', towerName: 'Tower 1 (Oak)', level: 'Basement 1', slotNumber: 'B1-042', walkingSequence: 4 },
-  { id: 'slot_05', towerId: 'tow_plh_t2', towerName: 'Tower 2 (Cedar)', level: 'Basement 2', slotNumber: 'B2-205', walkingSequence: 5 },
-  { id: 'slot_06', towerId: 'tow_plh_t2', towerName: 'Tower 2 (Cedar)', level: 'Basement 2', slotNumber: 'B2-210', walkingSequence: 6 }
-];
+export const INITIAL_SOCIETIES: Society[] = [];
+export const INITIAL_TOWERS: BuildingTower[] = [];
+export const INITIAL_SLOTS: ParkingSlot[] = [];
 
 export const SERVICE_PLANS: ServicePlan[] = [
   {
@@ -139,241 +87,13 @@ export const SERVICE_PLANS: ServicePlan[] = [
   }
 ];
 
-export const INITIAL_PROVIDERS: ProviderProfile[] = [
-  {
-    id: 'prov_ramesh_01',
-    userId: 'usr_prov_01',
-    fullName: 'Ramesh Kumar',
-    phoneNumber: '9845012345',
-    badgeNumber: 'AC-104',
-    assignedSocietyId: 'soc_plh_01',
-    assignedSocietyName: 'Prestige Lakeside Habitat',
-    ratingAverage: 4.92,
-    totalJobsDone: 1420,
-    isOnline: true,
-    checkInTime: '05:42 AM'
-  },
-  {
-    id: 'prov_suresh_02',
-    userId: 'usr_prov_02',
-    fullName: 'Suresh Gowda',
-    phoneNumber: '9845098765',
-    badgeNumber: 'AC-108',
-    assignedSocietyId: 'soc_sda_02',
-    assignedSocietyName: 'Sobha Dream Acres',
-    ratingAverage: 4.88,
-    totalJobsDone: 980,
-    isOnline: true,
-    checkInTime: '05:50 AM'
-  }
-];
-
-export const INITIAL_CUSTOMERS: User[] = [
-  {
-    id: 'usr_cust_01',
-    phoneNumber: '9876543210',
-    fullName: 'Arjun Nambiar',
-    email: 'arjun.nambiar@gmail.com',
-    role: 'CUSTOMER',
-    isActive: true,
-    createdAt: '2026-08-15'
-  }
-];
-
-export const INITIAL_VEHICLES: Vehicle[] = [
-  {
-    id: 'veh_01',
-    customerId: 'usr_cust_01',
-    make: 'Toyota',
-    model: 'Fortuner 4x4',
-    color: 'Pearl White',
-    registrationNo: 'KA 03 MX 4492',
-    type: 'SUV_LUXURY',
-    societyId: 'soc_plh_01',
-    societyName: 'Prestige Lakeside Habitat',
-    slotId: 'slot_01',
-    slotName: 'Tower 1 • Basement 2 • Slot #B2-104',
-    notes: 'Parked near Pillar C-14. Please wipe roof rack.',
-    isActive: true
-  },
-  {
-    id: 'veh_02',
-    customerId: 'usr_cust_01',
-    make: 'Honda',
-    model: 'City ZX',
-    color: 'Lunar Silver',
-    registrationNo: 'KA 51 ML 9021',
-    type: 'SEDAN',
-    societyId: 'soc_plh_01',
-    societyName: 'Prestige Lakeside Habitat',
-    slotId: 'slot_02',
-    slotName: 'Tower 1 • Basement 2 • Slot #B2-108',
-    notes: 'Covered parking.',
-    isActive: true
-  }
-];
-
-export const INITIAL_SUBSCRIPTIONS: Subscription[] = [
-  {
-    id: 'sub_01',
-    customerId: 'usr_cust_01',
-    vehicleId: 'veh_01',
-    vehicle: INITIAL_VEHICLES[0],
-    servicePlanId: 'plan_daily_pro',
-    plan: SERVICE_PLANS[0],
-    status: 'ACTIVE',
-    monthlyAmount: 1099,
-    startDate: '2026-08-15',
-    nextBillingDate: '2026-09-15',
-    preferredWindow: '06:00 - 08:00 AM',
-    assignedProviderId: 'prov_ramesh_01',
-    assignedProviderName: 'Ramesh Kumar (Badge #AC-104)'
-  }
-];
-
-export const INITIAL_JOBS: ServiceJob[] = [
-  {
-    id: 'job_01',
-    subscriptionId: 'sub_01',
-    vehicleId: 'veh_01',
-    vehicle: INITIAL_VEHICLES[0],
-    societyId: 'soc_plh_01',
-    societyName: 'Prestige Lakeside Habitat',
-    slotId: 'slot_01',
-    slotDetails: 'Tower 1 • Basement 2 • #B2-104',
-    walkingSequence: 1,
-    providerId: 'prov_ramesh_01',
-    providerName: 'Ramesh Kumar',
-    serviceDate: '2026-09-03',
-    timeWindow: '06:00 - 08:00 AM',
-    status: 'COMPLETED',
-    startedAt: '06:34 AM',
-    completedAt: '06:51 AM',
-    proof: {
-      id: 'prf_01',
-      jobId: 'job_01',
-      beforePhotoUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
-      afterPhotoUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80',
-      beforeTakenAt: '06:34 AM',
-      afterTakenAt: '06:51 AM',
-      syncTimestamp: '2026-09-03 06:52 AM',
-      durationMinutes: 17,
-      watermarkHash: 'SHA256:PLH-B2-104:20260903-0651'
-    },
-    ratingScore: 5,
-    ratingFeedback: 'Spotless cleaning on the alloys and windshield. Very satisfied!'
-  },
-  {
-    id: 'job_02',
-    subscriptionId: 'sub_02',
-    vehicleId: 'veh_02',
-    vehicle: INITIAL_VEHICLES[1],
-    societyId: 'soc_plh_01',
-    societyName: 'Prestige Lakeside Habitat',
-    slotId: 'slot_02',
-    slotDetails: 'Tower 1 • Basement 2 • #B2-108',
-    walkingSequence: 2,
-    providerId: 'prov_ramesh_01',
-    providerName: 'Ramesh Kumar',
-    serviceDate: '2026-09-03',
-    timeWindow: '06:00 - 08:00 AM',
-    status: 'IN_PROGRESS',
-    startedAt: '06:54 AM'
-  },
-  {
-    id: 'job_03',
-    subscriptionId: 'sub_03',
-    vehicleId: 'veh_03',
-    vehicle: {
-      id: 'veh_03',
-      customerId: 'usr_cust_02',
-      make: 'Hyundai',
-      model: 'Creta SX(O)',
-      color: 'Abyss Black',
-      registrationNo: 'KA 04 NM 2831',
-      type: 'COMPACT_SUV',
-      societyId: 'soc_plh_01',
-      societyName: 'Prestige Lakeside Habitat',
-      slotId: 'slot_03',
-      slotName: 'Tower 1 • Basement 2 • #B2-112',
-      isActive: true
-    },
-    societyId: 'soc_plh_01',
-    societyName: 'Prestige Lakeside Habitat',
-    slotId: 'slot_03',
-    slotDetails: 'Tower 1 • Basement 2 • #B2-112',
-    walkingSequence: 3,
-    providerId: 'prov_ramesh_01',
-    providerName: 'Ramesh Kumar',
-    serviceDate: '2026-09-03',
-    timeWindow: '06:00 - 08:00 AM',
-    status: 'SCHEDULED'
-  },
-  {
-    id: 'job_04',
-    subscriptionId: 'sub_04',
-    vehicleId: 'veh_04',
-    vehicle: {
-      id: 'veh_04',
-      customerId: 'usr_cust_03',
-      make: 'Tata',
-      model: 'Nexon EV',
-      color: 'Daytona Grey',
-      registrationNo: 'KA 01 EV 1099',
-      type: 'COMPACT_SUV',
-      societyId: 'soc_plh_01',
-      societyName: 'Prestige Lakeside Habitat',
-      slotId: 'slot_04',
-      slotName: 'Tower 1 • Basement 1 • #B1-042',
-      isActive: true
-    },
-    societyId: 'soc_plh_01',
-    societyName: 'Prestige Lakeside Habitat',
-    slotId: 'slot_04',
-    slotDetails: 'Tower 1 • Basement 1 • #B1-042',
-    walkingSequence: 4,
-    providerId: 'prov_ramesh_01',
-    providerName: 'Ramesh Kumar',
-    serviceDate: '2026-09-03',
-    timeWindow: '06:00 - 08:00 AM',
-    status: 'SCHEDULED'
-  }
-];
-
-export const INITIAL_PAYMENTS: PaymentTransaction[] = [
-  {
-    id: 'pay_01',
-    subscriptionId: 'sub_01',
-    customerId: 'usr_cust_01',
-    amount: 1099,
-    currency: 'INR',
-    status: 'CAPTURED',
-    razorpayPaymentId: 'pay_N8zL90kOpl42',
-    razorpayOrderId: 'order_N8zK11jH78',
-    invoiceNumber: 'INV-2026-08-0104',
-    paymentMethod: 'UPI_AUTOPAY',
-    createdAt: '2026-08-15 09:30 AM'
-  }
-];
-
-export const INITIAL_COMPLAINTS: ComplaintTicket[] = [
-  {
-    id: 'comp_01',
-    jobId: 'job_01',
-    jobSlot: 'Tower 1 • Basement 2 • #B2-104',
-    vehicleName: 'Toyota Fortuner',
-    vehiclePlate: 'KA 03 MX 4492',
-    customerId: 'usr_cust_01',
-    customerName: 'Arjun Nambiar',
-    category: 'MISSED_SPOTS',
-    description: 'Minor water streaks on driver-side window corner.',
-    status: 'RESOLVED',
-    resolutionNote: 'Specialist re-buffed glass at 7:15 AM with yellow microfiber.',
-    resolvedAt: '2026-09-03 07:20 AM',
-    createdAt: '2026-09-03 07:05 AM',
-    proof: INITIAL_JOBS[0].proof
-  }
-];
+export const INITIAL_PROVIDERS: ProviderProfile[] = [];
+export const INITIAL_CUSTOMERS: User[] = [];
+export const INITIAL_VEHICLES: Vehicle[] = [];
+export const INITIAL_SUBSCRIPTIONS: Subscription[] = [];
+export const INITIAL_JOBS: ServiceJob[] = [];
+export const INITIAL_PAYMENTS: PaymentTransaction[] = [];
+export const INITIAL_COMPLAINTS: ComplaintTicket[] = [];
 
 // ==========================================
 // STATE STORE & REACTIVE API LAYER
@@ -390,20 +110,15 @@ class DataStore {
   private jobs: ServiceJob[] = [...INITIAL_JOBS];
   private payments: PaymentTransaction[] = [...INITIAL_PAYMENTS];
   private complaints: ComplaintTicket[] = [...INITIAL_COMPLAINTS];
-  private enquiries: SocietyEnquiry[] = [
-    {
-      id: 'enq_01',
-      societyName: 'Brigade Cornerstone Utopia',
-      contactPerson: 'Karan Mehra (Secretary)',
-      email: 'karan.mehra@utopia-rwa.in',
-      phoneNumber: '9845012345',
-      city: 'Bengaluru (Varthur)',
-      estimatedUnits: 4200,
-      status: 'DEMO_SCHEDULED',
-      createdAt: '2026-09-02'
-    }
-  ];
-  private currentUser: User = INITIAL_CUSTOMERS[0];
+  private enquiries: SocietyEnquiry[] = [];
+  private currentUser: User = {
+    id: 'usr_guest',
+    phoneNumber: '',
+    fullName: 'Guest User',
+    role: 'CUSTOMER',
+    isActive: true,
+    createdAt: '2026-09-03'
+  };
   private listeners: (() => void)[] = [];
 
   constructor() {
