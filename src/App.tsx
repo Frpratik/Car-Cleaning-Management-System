@@ -11,7 +11,7 @@ import { ProviderView } from './views/ProviderView';
 import { AnalyticsView } from './views/AnalyticsView';
 
 export const App: React.FC = () => {
-  const [viewMode, setViewMode] = useState<'LANDING' | 'LOGIN' | 'APP'>('LANDING');
+  const [viewMode, setViewMode] = useState<'LANDING' | 'LOGIN' | 'APP'>('APP');
   const [role, setRole] = useState<UserRole | 'SUPER_ADMIN'>('SUPER_ADMIN');
   const [tab, setTab] = useState<'MAIN' | 'ANALYTICS'>('MAIN');
   const [, setTick] = useState(0);
@@ -37,14 +37,14 @@ export const App: React.FC = () => {
   };
 
   if (viewMode === 'LANDING') {
-    return <PublicLandingPage onOpenLogin={() => setViewMode('LOGIN')} />;
+    return <PublicLandingPage onOpenLogin={() => setViewMode('APP')} />;
   }
 
   if (viewMode === 'LOGIN') {
     return (
       <LoginView 
         onLogin={handleLoginSuccess} 
-        onBackToLanding={() => setViewMode('LANDING')} 
+        onBackToLanding={() => setViewMode('APP')} 
       />
     );
   }
