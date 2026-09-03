@@ -8,15 +8,13 @@ import { SuperAdminView } from './views/SuperAdminView';
 import { AdminView } from './views/AdminView';
 import { CustomerView } from './views/CustomerView';
 import { ProviderView } from './views/ProviderView';
-import { AnalyticsView } from './views/AnalyticsView';
 
 export const App: React.FC = () => {
-  const [viewMode, setViewMode] = useState<'LANDING' | 'LOGIN' | 'APP'>('APP');
-  const [role, setRole] = useState<UserRole | 'SUPER_ADMIN'>('SUPER_ADMIN');
-  const [tab, setTab] = useState<'MAIN' | 'ANALYTICS'>('MAIN');
+  // Session State: null = Public Website, 'LOGIN' = Sign In Modal, or UserRole
+  const [activeSessionRole, setActiveSessionRole] = useState<UserRole | 'SUPER_ADMIN' | 'LOGIN' | null>('SUPER_ADMIN');
   const [, setTick] = useState(0);
 
-  // Subscribe to store updates
+  // Subscribe to reactive store changes
   useEffect(() => {
     const unsubscribe = store.subscribe(() => {
       setTick(t => t + 1);
@@ -24,54 +22,56 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  const handleRoleChange = (newRole: UserRole | 'SUPER_ADMIN') => {
-    if (newRole !== 'SUPER_ADMIN') {
-      store.switchRole(newRole);
+  const handleLogin = (role: UserRole | 'SUPER_ADMIN') => {
+    if (role !== 'SUPER_ADMIN') {
+      store.switchRole(role);
     }
-    setRole(newRole);
+    setActiveSessionRole(role);
   };
 
-  const handleLoginSuccess = (userRole: UserRole | 'SUPER_ADMIN') => {
-    handleRoleChange(userRole);
-    setViewMode('APP');
+  const handleSignOut = () => {
+    setActiveSessionRole(null);
   };
 
-  if (viewMode === 'LANDING') {
-    return <PublicLandingPage onOpenLogin={() => setViewMode('APP')} />;
+  const handleOpenLogin = () => {
+    setActiveSessionRole('LOGIN');
+  };
+
+  // 1. PUBLIC COMMERCIAL LANDING PAGE
+  if (activeSessionRole === null) {
+    return <PublicLandingPage onOpenLogin={handleOpenLogin} />;
   }
 
-  if (viewMode === 'LOGIN') {
+  // 2. AUTHENTICATION & PORTAL SELECTOR
+  if (activeSessionRole === 'LOGIN') {
     return (
-      <LoginView 
-        onLogin={handleLoginSuccess} 
-        onBackToLanding={() => setViewMode('APP')} 
+      <LoginView
+        onLogin={handleLogin}
+        onBackToLanding={handleSignOut}
       />
     );
   }
 
+  // 3. AUTHENTICATED DEDICATED PORTAL WITH ROLE-ISOLATED TOPBAR
+  const societies = store.getSocieties();
+  const currentSocietyName = societies[0]?.name;
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Universal Top Navigation */}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#090D14' }}>
+      {/* Universal Production SaaS Top Bar */}
       <TopBar 
-        currentRole={role} 
-        currentTab={tab}
-        onRoleChange={handleRoleChange} 
-        onTabChange={setTab}
-        onGoToPublic={() => setViewMode('LANDING')}
+        currentRole={activeSessionRole}
+        societyName={currentSocietyName}
+        onSignOut={handleSignOut}
+        onSwitchPortal={() => setActiveSessionRole('LOGIN')}
       />
 
-      {/* Surface Switching by Role & Tab */}
+      {/* Strict Role-Isolated Workspaces */}
       <main style={{ flex: 1 }}>
-        {tab === 'ANALYTICS' ? (
-          <AnalyticsView />
-        ) : (
-          <>
-            {role === 'SUPER_ADMIN' && <SuperAdminView />}
-            {role === 'ADMIN' && <AdminView />}
-            {role === 'CUSTOMER' && <CustomerView />}
-            {role === 'PROVIDER' && <ProviderView />}
-          </>
-        )}
+        {activeSessionRole === 'SUPER_ADMIN' && <SuperAdminView />}
+        {(activeSessionRole === 'ADMIN' || activeSessionRole === 'SOCIETY_MANAGER') && <AdminView />}
+        {activeSessionRole === 'CUSTOMER' && <CustomerView />}
+        {activeSessionRole === 'PROVIDER' && <ProviderView />}
       </main>
     </div>
   );
