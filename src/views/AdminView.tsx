@@ -2,17 +2,21 @@ import React, { useState } from 'react';
 import { store } from '../services/store';
 import { StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { SocietyOnboardingWizard } from './SocietyOnboardingWizard';
 import { 
   Building2, 
   Car, 
   CheckCircle2, 
   Clock, 
   Users, 
-  Search,
-  ShieldCheck,
-  AlertTriangle,
-  Receipt,
-  UserPlus
+  Search, 
+  ShieldCheck, 
+  AlertTriangle, 
+  Receipt, 
+  UserPlus, 
+  Layers, 
+  Copy, 
+  Check 
 } from 'lucide-react';
 
 export const AdminView: React.FC = () => {
@@ -22,6 +26,9 @@ export const AdminView: React.FC = () => {
   const providers = store.getProviders();
   const complaints = store.getComplaints();
   const payments = store.getPayments();
+
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'MANIFEST' | 'COMPLAINTS' | 'FINANCE'>('MANIFEST');
   const [selectedSocietyFilter, setSelectedSocietyFilter] = useState<string>('ALL');
@@ -69,9 +76,56 @@ export const AdminView: React.FC = () => {
     }
   };
 
+  const copyInviteLink = () => {
+    const inviteUrl = `${window.location.origin}/join/PLH-BLR`;
+    navigator.clipboard.writeText(inviteUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 3000);
+  };
+
+  if (showSetupWizard) {
+    return (
+      <SocietyOnboardingWizard
+        societyId={societies[0]?.id || 'soc_plh_01'}
+        onComplete={() => setShowSetupWizard(false)}
+        onExit={() => setShowSetupWizard(false)}
+      />
+    );
+  }
+
   return (
     <div className="container-admin" style={{ padding: '24px 32px 80px' }}>
       
+      {/* RWA Onboarding & Resident Access Quick Banner */}
+      <div style={{ backgroundColor: '#161F30', border: '1.5px solid #2A3C5D', borderRadius: 'var(--radius-md)', padding: '12px 18px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Layers size={18} color="#60A5FA" />
+          <span style={{ fontSize: '0.8125rem', color: '#F8FAFC' }}>
+            <strong>RWA Portal:</strong> Manage Towers, Parking Slots, Cleaner Rosters, and Resident Access.
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button
+            size="sm"
+            variant="outline"
+            leftIcon={copiedLink ? <Check size={14} /> : <Copy size={14} />}
+            onClick={copyInviteLink}
+          >
+            {copiedLink ? 'Resident Link Copied ✓' : 'Copy Resident Join Link'}
+          </Button>
+
+          <Button
+            size="sm"
+            variant="primary"
+            leftIcon={<Layers size={14} />}
+            onClick={() => setShowSetupWizard(true)}
+          >
+            Launch Setup Checklist (9 Steps)
+          </Button>
+        </div>
+      </div>
+
       {/* 1. Header & Section Switcher */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
@@ -81,7 +135,7 @@ export const AdminView: React.FC = () => {
               OPERATIONS & DISPATCH SUITE ACTIVE
             </span>
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>Operations Command Center</h1>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>Society Admin Operations</h1>
           <p style={{ fontSize: '0.875rem' }}>Real-time society density monitoring, cleaner dispatch, complaints audit, and finance reconciliation.</p>
         </div>
 

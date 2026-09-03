@@ -477,8 +477,33 @@ class DataStore {
     return this.towers.filter(t => t.societyId === societyId);
   }
 
+  public addTower(societyId: string, name: string, totalFloors: number = 24): BuildingTower {
+    const newTower: BuildingTower = {
+      id: `tow_${Date.now()}`,
+      societyId,
+      name,
+      totalFloors
+    };
+    this.towers.push(newTower);
+    this.notify();
+    return newTower;
+  }
+
   public getSlots(towerId: string): ParkingSlot[] {
     return this.slots.filter(s => s.towerId === towerId);
+  }
+
+  public addSlot(towerId: string, level: string, slotNumber: string, walkingSequence: number = 0): ParkingSlot {
+    const newSlot: ParkingSlot = {
+      id: `slot_${Date.now()}`,
+      towerId,
+      level,
+      slotNumber,
+      walkingSequence
+    };
+    this.slots.push(newSlot);
+    this.notify();
+    return newSlot;
   }
 
   public getServicePlans(): ServicePlan[] {
