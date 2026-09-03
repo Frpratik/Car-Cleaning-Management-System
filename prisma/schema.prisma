@@ -1,5 +1,7 @@
-// AuraCar Precision Car Care OS Database Schema
-// Optimized for Residential Gated Communities & Density Operations
+// =========================================================================
+// AuraCar OS — Multi-Tenant Residential Car Care SaaS Database Schema
+// PostgreSQL 16 Relational Engine
+// =========================================================================
 
 datasource db {
   provider = "postgresql"
@@ -10,39 +12,56 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// -------------------------------------------------------------------------
+// 1. Core Authentication, RBAC & Multi-Tenancy Hierarchy
+// -------------------------------------------------------------------------
+
 enum UserRole {
-  CUSTOMER
-  PROVIDER
-  ADMIN
-  SOCIETY_MANAGER
+  SUPER_ADMIN     // Platform owner (Our company)
+  SOCIETY_ADMIN   // Residential Society / RWA Facility Manager
+  CUSTOMER        // Society Resident / Car Owner
+  PROVIDER        // Assigned Cleaning Specialist
 }
 
 model User {
-  id            String          @id @default(uuid())
-  phoneNumber   String          @unique
-  email         String?         @unique
-  fullName      String
-  role          UserRole        @default(CUSTOMER)
-  isActive      Boolean         @default(true)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id                String          @id @default(uuid())
+  phoneNumber       String          @unique
+  email             String?         @unique
+  passwordHash      String
+  fullName          String
+  role              UserRole        @default(CUSTOMER)
+  
+  // Tenancy isolation (Null for Super Admin, mandatory for Society Admin/Customer/Provider)
+  societyId         String?
+  society           Society?        @relation(fields: [societyId], references: [id], onDelete: SetNull)
 
-  customer      CustomerProfile?
-  provider      ProviderProfile?
-  admin         AdminProfile?
+  isEmailVerified   Boolean         @default(false)
+  mustResetPassword Boolean         @default(false)
+  isActive          Boolean         @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  customerProfile   CustomerProfile?
+  providerProfile   ProviderProfile?
+  adminProfile      AdminProfile?
+  auditLogs         AuditLog[]
+
+  @@index([role, societyId])
 }
 
 model CustomerProfile {
-  id               String          @id @default(uuid())
-  userId           String          @unique
-  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  alternatePhone   String?
-  defaultSocietyId String?
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apartmentNumber   String?         // e.g. "Tower 1 - Flat 1204"
+  alternatePhone    String?
   
-  vehicles         Vehicle[]
-  subscriptions    Subscription[]
-  payments         Payment[]
-  ratings          Rating[]
+  vehicles          Vehicle[]
+  subscriptions     Subscription[]
+  payments          Payment[]
+  ratings           Rating[]
+  complaints        Complaint[]
 }
 
 model ProviderProfile {
@@ -63,28 +82,134 @@ model ProviderProfile {
 }
 
 model AdminProfile {
-  id            String          @id @default(uuid())
-  userId        String          @unique
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  department    String          @default("OPERATIONS")
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department        String          @default("OPERATIONS")
+}
+
+// -------------------------------------------------------------------------
+// 2. Society Tenant & B2B Commercial Management
+// -------------------------------------------------------------------------
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
 }
 
 model Society {
+  id                    String              @id @default(uuid())
+  name                  String              // e.g. "Prestige Lakeside Habitat"
+  code                  String              @unique // e.g. "PLH-BLR"
+  addressLine           String
+  locality              String              // e.g. "Whitefield"
+  city                  String              // e.g. "Bengaluru"
+  state                 String              @default("Karnataka")
+  pincode               String
+  waterPolicy           String              @default("WATERLESS_ONLY")
+  
+  tenantStatus          TenantStatus        @default(ACTIVE)
+  subscriptionStartDate DateTime            @default(now())
+  subscriptionEndDate   DateTime?
+  maxUnits              Int                 @default(500)
+  isActive              Boolean             @default(true)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  users                 User[]
+  towers                BuildingTower[]
+  providers             ProviderProfile[]
+  jobs                  ServiceJob[]
+  onboardingState       SocietyOnboarding?
+  commissionRules       CommissionRule[]
+  complaints            Complaint[]
+}
+
+// Public Inbound Sales Lead / Enquiry from Commercial Website
+enum EnquiryStatus {
+  NEW
+  CONTACTED
+  DEMO_SCHEDULED
+  PROPOSAL_SENT
+  CONVERTED
+  ARCHIVED
+}
+
+model SocietyEnquiry {
   id                String          @id @default(uuid())
-  name              String          // e.g. "Prestige Lakeside Habitat"
-  code              String          @unique // e.g. "PLH-BLR"
-  addressLine       String
-  locality          String          // e.g. "Whitefield"
-  city              String          // e.g. "Bengaluru"
-  pincode           String
-  waterPolicy       String          @default("WATERLESS_ONLY")
-  isActive          Boolean         @default(true)
+  societyName       String
+  contactPerson     String
+  email             String
+  phoneNumber       String
+  city              String
+  estimatedUnits    Int?
+  estimatedVehicles Int?
+  message           String?
+  status            EnquiryStatus   @default(NEW)
+  internalNotes     String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([status, createdAt])
+}
+
+// 9-Step Society Admin Onboarding Checklist
+model SocietyOnboarding {
+  id                String          @id @default(uuid())
+  societyId         String          @unique
+  society           Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  currentStep       Int             @default(1)
+  isCompleted       Boolean         @default(false)
+  
+  step1Details      Boolean         @default(true)
+  step2Buildings    Boolean         @default(false)
+  step3Parking      Boolean         @default(false)
+  step4Slots        Boolean         @default(false)
+  step5Services     Boolean         @default(false)
+  step6Providers    Boolean         @default(false)
+  step7Residents    Boolean         @default(false)
+  step8Settings     Boolean         @default(false)
+  step9Launched     Boolean         @default(false)
+  
+  completedAt       DateTime?
+  updatedAt         DateTime        @updatedAt
+}
+
+// Dynamic Platform vs Provider vs Society Revenue Share
+model CommissionRule {
+  id                    String      @id @default(uuid())
+  societyId             String?     // Null = Global Default, Specific = Tenant Override
+  society               Society?    @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  name                  String      @default("Standard 40/60 Split")
+  platformFeePercentage Float       @default(40.0) // 40% platform gross margin
+  providerPayoutRate    Int         @default(22)   // ₹22 fixed payout per car cleaned
+  societySharePercent   Float       @default(0.0)  // Optional RWA revenue share
+  isActive              Boolean     @default(true)
+  createdAt             DateTime    @default(now())
+}
+
+// Immutable Tamper-Evident Audit Log
+model AuditLog {
+  id                String          @id @default(uuid())
+  actorUserId       String?
+  actor             User?           @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorRole         UserRole
+  societyId         String?
+  action            String          // e.g. "SOCIETY_CREATED", "REFUND_ISSUED", "CLEANER_REASSIGNED"
+  resourceType      String          // e.g. "Subscription", "Payment", "ServiceJob"
+  resourceId        String?
+  metadataJson      String?         // Serialized JSON with before/after state
+  ipAddress         String?
   createdAt         DateTime        @default(now())
 
-  towers            BuildingTower[]
-  providers         ProviderProfile[]
-  jobs              ServiceJob[]
+  @@index([societyId, action, createdAt])
 }
+
+// -------------------------------------------------------------------------
+// 3. Physical Parking Hierarchy (Basement Walking Sequence)
+// -------------------------------------------------------------------------
 
 model BuildingTower {
   id          String        @id @default(uuid())
@@ -104,7 +229,7 @@ model ParkingSlot {
   tower           BuildingTower @relation(fields: [towerId], references: [id], onDelete: Cascade)
   level           String        // "Basement 1", "Basement 2", "Podium"
   slotNumber      String        // "B2-104"
-  walkingSequence Int           @default(0)
+  walkingSequence Int           @default(0) // Physical ordered sequence for cleaners
   
   vehicles        Vehicle[]
   jobs            ServiceJob[]
@@ -112,6 +237,10 @@ model ParkingSlot {
   @@unique([towerId, level, slotNumber])
   @@index([walkingSequence])
 }
+
+// -------------------------------------------------------------------------
+// 4. Vehicles & Service Plans
+// -------------------------------------------------------------------------
 
 enum VehicleType {
   HATCHBACK
@@ -124,9 +253,9 @@ model Vehicle {
   id              String          @id @default(uuid())
   customerId      String
   customer        CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  make            String
-  model           String
-  color           String
+  make            String          // e.g. "Toyota"
+  model           String          // e.g. "Fortuner"
+  color           String          // e.g. "Pearl White"
   registrationNo  String          @unique
   type            VehicleType     @default(SEDAN)
   slotId          String
@@ -161,6 +290,10 @@ model ServicePlan {
   subscriptions   Subscription[]
 }
 
+// -------------------------------------------------------------------------
+// 5. Subscriptions & Automated Work Orders
+// -------------------------------------------------------------------------
+
 enum SubscriptionStatus {
   DRAFT
   PENDING_PAYMENT
@@ -182,6 +315,7 @@ model Subscription {
   monthlyAmount   Int
   startDate       DateTime
   endDate         DateTime?
+  pausedUntil     DateTime?
   nextBillingDate DateTime?
   preferredWindow String              @default("06:00-08:00")
   createdAt       DateTime            @default(now())
@@ -227,6 +361,7 @@ model ServiceJob {
 
   proof             ServiceProof?
   rating            Rating?
+  complaints        Complaint[]
 
   @@unique([vehicleId, serviceDate])
   @@index([societyId, serviceDate, status])
@@ -245,6 +380,10 @@ model ServiceProof {
   watermarkHash   String?
 }
 
+// -------------------------------------------------------------------------
+// 6. Payments, Ratings & Dispute Resolution
+// -------------------------------------------------------------------------
+
 enum PaymentStatus {
   PENDING
   AUTHORIZED
@@ -262,18 +401,55 @@ model Payment {
   amount            Int
   currency          String          @default("INR")
   status            PaymentStatus   @default(PENDING)
+  invoiceNumber     String?         @unique
   razorpayOrderId   String?         @unique
   razorpayPaymentId String?         @unique
+  paymentMethod     String          @default("UPI_AUTOPAY")
   createdAt         DateTime        @default(now())
 }
 
 model Rating {
-  id          String      @id @default(uuid())
-  jobId       String      @unique
-  job         ServiceJob  @relation(fields: [jobId], references: [id])
-  customerId  String
-  customer    CustomerProfile @relation(fields: [customerId], references: [id])
-  score       Int
-  feedback    String?
-  createdAt   DateTime    @default(now())
+  id              String          @id @default(uuid())
+  jobId           String          @unique
+  job             ServiceJob      @relation(fields: [jobId], references: [id])
+  customerId      String
+  customer        CustomerProfile @relation(fields: [customerId], references: [id])
+  score           Int             // 1 to 5 stars
+  feedback        String?
+  createdAt       DateTime        @default(now())
+}
+
+enum ComplaintCategory {
+  MISSED_SPOTS
+  SCRATCH_CLAIM
+  LATE_SERVICE
+  CLEANER_UNAVAILABLE
+  OTHER
+}
+
+enum ComplaintStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REFUNDED
+  REJECTED
+}
+
+model Complaint {
+  id              String              @id @default(uuid())
+  societyId       String
+  society         Society             @relation(fields: [societyId], references: [id])
+  jobId           String
+  job             ServiceJob          @relation(fields: [jobId], references: [id])
+  customerId      String
+  customer        CustomerProfile     @relation(fields: [customerId], references: [id])
+  category        ComplaintCategory   @default(MISSED_SPOTS)
+  description     String
+  status          ComplaintStatus     @default(OPEN)
+  resolutionNote  String?
+  resolvedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([societyId, status])
 }
